@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Order Management</title>
+<base target="_blank">
+<link rel="stylesheet" href="anika.css">
+</head>
+<body>
+<main>
+    <h1 class="page-title">Order Management</h1>
+
+    <section class="stat-grid" aria-label="Owner dashboard">
+        <div class="stat-card"><p class="stat-label">Orders today</p><p class="stat-value" id="stat-today">0</p></div>
+        <div class="stat-card"><p class="stat-label">Revenue today</p><p class="stat-value" id="stat-revenue">₱0</p></div>
+        <div class="stat-card"><p class="stat-label">In queue</p><p class="stat-value" id="stat-queue">0</p></div>
+        <div class="stat-card"><p class="stat-label">Low stock (Module 6)</p><p class="stat-value" id="stat-lowstock">0</p></div>
+        <div class="stat-card"><p class="stat-label">Unclaimed</p><p class="stat-value" id="stat-unclaimed">0</p></div>
+    </section>
+
+    <section class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <h3 style="margin:0;">Orders and queue</h3>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="search" id="search-input" class="input search-input" placeholder="Search orders..." autocomplete="off" style="padding:6px 10px; flex-grow:1;">
+                <button type="button" class="btn btn-secondary" id="next-btn" style="white-space:nowrap;">Queue is empty</button>
+                <button type="button" class="btn btn-primary" id="add-btn" style="white-space:nowrap;">New order</button>
+            </div>
+        </div>
+        <p class="field-error" id="queue-hint" style="margin:8px 0 0; color:inherit; opacity:0.7;"></p>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th scope="col">Order ID</th>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Service</th>
+                        <th scope="col">Print details</th>
+                        <th scope="col">File (Module 4)</th>
+                        <th scope="col">Queue</th>
+                        <th scope="col">Total</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="order-table-body"></tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <h3 style="margin:0;">Alerts</h3>
+            <div style="display:flex; gap:10px;">
+                <button type="button" class="btn btn-secondary btn-small" id="day-btn" title="Demo control: moves shop time forward to test the unclaimed alert">Skip 1 day</button>
+                <button type="button" class="btn btn-danger btn-small" id="reset-btn">Clear data</button>
+            </div>
+        </div>
+        <hr style="width:100%; margin:12px 0; border:none; border-top:1px solid #e5e5e5;">
+        <ul class="activity-feed" id="notification-list" style="padding-left:0;"></ul>
+    </section>
+</main>
+
+<div class="modal-overlay" id="order-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" hidden>
+    <div class="modal-box">
+        <div class="modal-head" style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 id="modal-title">New order</h3>
+            <button type="button" class="icon-btn" id="modal-close" aria-label="Close">&#215;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="customerName">Customer name</label>
+                    <input type="text" id="customerName" class="input" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="subject">Subject (optional)</label>
+                    <input type="text" id="subject" class="input" placeholder="e.g. Thesis printing" autocomplete="off">
+                </div>
+                <div class="form-group">
+                    <label for="serviceType">Service</label>
+                    <select id="serviceType" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="serviceOption">Option</label>
+                    <select id="serviceOption" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="paperSize">Paper size</label>
+                    <select id="paperSize" class="input">
+                        <option value="Letter">Letter</option>
+                        <option value="Legal">Legal</option>
+                        <option value="A4">A4</option>
+                        <option value="Others">Others</option>
+                    </select>
+                    <input type="text" id="paperSizeOther" class="input" placeholder="Specify paper type / size" autocomplete="off" hidden>
+                </div>
+                <div class="form-group">
+                    <label for="colorTier">Color tier</label>
+                    <select id="colorTier" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="fileChannel">Received through</label>
+                    <select id="fileChannel" class="input"></select>
+                </div>
+                <div class="form-group">
+                    <label for="pages">Pages</label>
+                    <input type="number" id="pages" class="input" min="1" step="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="copies">Copies</label>
+                    <input type="number" id="copies" class="input" min="1" step="1" value="1">
+                </div>
+                <div class="form-group">
+                    <label for="isRush">Rush order</label>
+                    <input type="checkbox" id="isRush">
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes (optional)</label>
+                    <input type="text" id="notes" class="input" placeholder="Binding instructions, special requests" autocomplete="off">
+                </div>
+            </div>
+            <p>Price per page: <span id="rate-preview">₱0</span></p>
+            <p><strong>Total price: <span id="total-preview">₱0</span></strong></p>
+            <p class="field-error" id="order-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary" id="cancel-btn">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-btn">Add to queue</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ==========================================================================
+   HAND-CODED HELPERS - plain loops and index assignment only.
+   No array methods, no string-method shortcuts, no Math, no JSON, no Number.is*.
+   (Renamed per SCHEMA_AND_MODULE_MAP.md naming rules: camelCase functions and
+   variables, UPPER_SNAKE_CASE constants, descriptive names, no abbreviations.)
+   ========================================================================== */
+//  The value for 'not a number' (0 divided by 0 gives NaN)
+var NOT_A_NUMBER = 0 / 0;
+//  All capital letters, used to change letter case
+var UPPERCASE_LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+//  All small letters, used to change letter case
+var LOWERCASE_LETTERS = "abcdefghijklmnopqrstuvwxyz";
+//  Short month names, used when showing dates
+var MONTH_ABBREVIATIONS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+//  Checks if one character is a space, tab, or new line
+function isSpaceCharacter(characterText) {
+    return characterText === " " || characterText === "\t" || characterText === "\n" ||
+        characterText === "\r" || characterText === "\f" || characterText === "\v";
+}
+
+//  Copies the letters from the start position up to (not including) the end position
+function copySubstring(sourceText, startIndex, endIndex) {
+    var resultText = "";
+    var charIndex;
+    for (charIndex = startIndex; charIndex < endIndex && charIndex < sourceText.length; charIndex = charIndex + 1) {
+        resultText = resultText + sourceText[charIndex];
+    }
+    return resultText;
+}
+
+//  Removes spaces from the start and end of a text
+function trimWhitespace(rawValue) {
+    var sourceText = String(rawValue);
+    var startIndex = 0;
+    var endIndex = sourceText.length;
+    while (startIndex < endIndex && isSpaceCharacter(sourceText[startIndex])) { startIndex = startIndex + 1; }
+    while (endIndex > startIndex && isSpaceCharacter(sourceText[endIndex - 1])) { endIndex = endIndex - 1; }
+    return copySubstring(sourceText, startIndex, endIndex);
+}
+
+//  Changes letters using two lists (from-letters and to-letters), one letter at a time
+function convertLetterCase(rawValue, fromLetters, toLetters) {
+    var sourceText = String(rawValue);
+    var resultText = "";
+    var textIndex;
+    var letterIndex;
+    var wasConverted;
+    for (textIndex = 0; textIndex < sourceText.length; textIndex = textIndex + 1) {
+        wasConverted = false;
+        for (letterIndex = 0; letterIndex < 26; letterIndex = letterIndex + 1) {
+            if (sourceText[textIndex] === fromLetters[letterIndex]) {
+                resultText = resultText + toLetters[letterIndex];
+                wasConverted = true;
+                break;
+            }
+        }
+        if (!wasConverted) { resultText = resultText + sourceText[textIndex]; }
+    }
+    return resultText;
+}
+//  Changes all capital letters to small letters
+function toLowerCaseText(rawValue) { return convertLetterCase(rawValue, UPPERCASE_LETTERS, LOWERCASE_LETTERS); }
+//  Changes all small letters to capital letters
+function toUpperCaseText(rawValue) { return convertLetterCase(rawValue, LOWERCASE_LETTERS, UPPERCASE_LETTERS); }
+
+//  Checks if a text contains another text (returns true or false)
+function textIncludes(sourceValue, targetValue) {
+    var sourceText = String(sourceValue);
+    var targetText = String(targetValue);
+    var startIndex;
+    var offsetIndex;
+    var isMatch;
+    if (targetText === "") { return true; }
+    for (startIndex = 0; startIndex + targetText.length <= sourceText.length; startIndex = startIndex + 1) {
+        isMatch = true;
+        for (offsetIndex = 0; offsetIndex < targetText.length; offsetIndex = offsetIndex + 1) {
+            if (sourceText[startIndex + offsetIndex] !== targetText[offsetIndex]) { isMatch = false; break; }
+        }
+        if (isMatch) { return true; }
+    }
+    return false;
+}
+
+/* ---- type checks and math ---- */
+//  Checks if a value is an array (has a length number)
+function isArrayLike(value) { return value !== null && typeof value === "object" && typeof value.length === "number"; }
+//  Checks if a value is a real number (not NaN and not Infinity)
+function isFiniteNumber(numberValue) {
+    return typeof numberValue === "number" && numberValue === numberValue &&
+        numberValue !== 1 / 0 && numberValue !== -1 / 0;
+}
+//  Checks if a number has no decimal part
+function isWholeNumber(numberValue) { return isFiniteNumber(numberValue) && numberValue % 1 === 0; }
+//  Rounds a number down (3.9 becomes 3, -3.1 becomes -4)
+function floorNumber(numberValue) {
+    var truncatedValue = numberValue - (numberValue % 1);
+    if (numberValue < 0 && truncatedValue !== numberValue) { truncatedValue = truncatedValue - 1; }
+    return truncatedValue;
+}
+//  Rounds a number to the nearest whole number
+function roundNumber(numberValue) { return floorNumber(numberValue + 0.5); }
+//  Returns the bigger of two numbers
+function maxNumber(firstNumber, secondNumber) { return firstNumber > secondNumber ? firstNumber : secondNumber; }
+
+/* ---- class tokens ---- */
+//  Checks if an element already has a CSS class name
+function hasClassToken(element, targetClass) {
+    var classText = element.className;
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText === targetClass) { return true; }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    return false;
+}
+//  Adds a CSS class name to an element (only if it is not there yet)
+function addClassToken(element, newClass) {
+    if (hasClassToken(element, newClass)) { return; }
+    if (element.className !== "") { element.className = element.className + " "; }
+    element.className = element.className + newClass;
+}
+//  Removes a CSS class name from an element
+function removeClassToken(element, targetClass) {
+    var classText = element.className;
+    var resultText = "";
+    var tokenText = "";
+    var charIndex;
+    for (charIndex = 0; charIndex <= classText.length; charIndex = charIndex + 1) {
+        if (charIndex === classText.length || isSpaceCharacter(classText[charIndex])) {
+            if (tokenText !== "" && tokenText !== targetClass) {
+                if (resultText !== "") { resultText = resultText + " "; }
+                resultText = resultText + tokenText;
+            }
+            tokenText = "";
+        } else { tokenText = tokenText + classText[charIndex]; }
+    }
+    element.className = resultText;
+}
+//  Checks if the chosen option in a dropdown is disabled
+function isSelectedOptionDisabled(selectElement) {
+    return selectElement.selectedIndex >= 0 && selectElement.options[selectElement.selectedIndex].disabled;
+}
+
+/* ---- JSON (hand-written writer and reader) ---- */
+//  Puts quotes around a text and escapes special characters, so it is safe for JSON
+function quoteJsonString(sourceText) {
+    var quotedText = "\"";
+    var charIndex;
+    var currentChar;
+    for (charIndex = 0; charIndex < sourceText.length; charIndex = charIndex + 1) {
+        currentChar = sourceText[charIndex];
+        if (currentChar === "\"") { quotedText = quotedText + "\\\""; }
+        else if (currentChar === "\\") { quotedText = quotedText + "\\\\"; }
+        else if (currentChar === "\n") { quotedText = quotedText + "\\n"; }
+        else if (currentChar === "\r") { quotedText = quotedText + "\\r"; }
+        else if (currentChar === "\t") { quotedText = quotedText + "\\t"; }
+        else { quotedText = quotedText + currentChar; }
+    }
+    return quotedText + "\"";
+}
+//  Turns a value (text, number, array, or object) into JSON text
+function stringifyJson(value) {
+    var valueType = typeof value;
+    var jsonText;
+    var itemIndex;
+    var keyName;
+    var isFirstKey;
+    if (value === null || value === undefined || valueType === "function") { return "null"; }
+    if (valueType === "number") { return isFiniteNumber(value) ? String(value) : "null"; }
+    if (valueType === "boolean") { return value ? "true" : "false"; }
+    if (valueType === "string") { return quoteJsonString(value); }
+    if (isArrayLike(value)) {
+        jsonText = "[";
+        for (itemIndex = 0; itemIndex < value.length; itemIndex = itemIndex + 1) {
+            if (itemIndex > 0) { jsonText = jsonText + ","; }
+            jsonText = jsonText + stringifyJson(value[itemIndex]);
+        }
+        return jsonText + "]";
+    }
+    jsonText = "{";
+    isFirstKey = true;
+    for (keyName in value) {
+        if (value[keyName] === undefined || typeof value[keyName] === "function") { continue; }
+        if (!isFirstKey) { jsonText = jsonText + ","; }
+        isFirstKey = false;
+        jsonText = jsonText + quoteJsonString(keyName) + ":" + stringifyJson(value[keyName]);
+    }
+    return jsonText + "}";
+}
+
+// parserState = { sourceText: the JSON text, position: index of the next character to read }
+//  Moves the reading position forward past any spaces
+function skipJsonWhitespace(parserState) {
+    while (parserState.position < parserState.sourceText.length &&
+           isSpaceCharacter(parserState.sourceText[parserState.position])) {
+        parserState.position = parserState.position + 1;
+    }
+}
+//  Reads true, false, or null from the JSON text and returns its value
+function parseJsonKeyword(parserState, keywordText, keywordValue) {
+    var charIndex;
+    for (charIndex = 0; charIndex < keywordText.length; charIndex = charIndex + 1) {
+        if (parserState.sourceText[parserState.position + charIndex] !== keywordText[charIndex]) { throw "bad json"; }
+    }
+    parserState.position = parserState.position + keywordText.length;
+    return keywordValue;
+}
+//  Reads one quoted text from the JSON text and returns it
+function parseJsonString(parserState) {
+    var parsedText = "";
+    var currentChar;
+    var escapedChar;
+    if (parserState.sourceText[parserState.position] !== "\"") { throw "bad json"; }
+    parserState.position = parserState.position + 1;
+    while (parserState.position < parserState.sourceText.length &&
+           parserState.sourceText[parserState.position] !== "\"") {
+        currentChar = parserState.sourceText[parserState.position];
+        if (currentChar === "\\") {
+            parserState.position = parserState.position + 1;
+            escapedChar = parserState.sourceText[parserState.position];
+            if (escapedChar === "n") { parsedText = parsedText + "\n"; }
+            else if (escapedChar === "r") { parsedText = parsedText + "\r"; }
+            else if (escapedChar === "t") { parsedText = parsedText + "\t"; }
+            else if (escapedChar === "\"" || escapedChar === "\\" || escapedChar === "/") { parsedText = parsedText + escapedChar; }
+            else { throw "bad json"; }
+        } else { parsedText = parsedText + currentChar; }
+        parserState.position = parserState.position + 1;
+    }
+    parserState.position = parserState.position + 1;
+    return parsedText;
+}
+//  Reads any JSON value (object, array, text, keyword, or number) from the current position
+function parseJsonValue(parserState) {
+    var firstChar;
+    var parsedObject;
+    var parsedArray;
+    var keyName;
+    var itemCount;
+    var numberText;
+    skipJsonWhitespace(parserState);
+    firstChar = parserState.sourceText[parserState.position];
+    if (firstChar === "{") {
+        parsedObject = {};
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+        while (true) {
+            skipJsonWhitespace(parserState);
+            keyName = parseJsonString(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] !== ":") { throw "bad json"; }
+            parserState.position = parserState.position + 1;
+            parsedObject[keyName] = parseJsonValue(parserState);
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "}") { parserState.position = parserState.position + 1; return parsedObject; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "[") {
+        parsedArray = [];
+        itemCount = 0;
+        parserState.position = parserState.position + 1;
+        skipJsonWhitespace(parserState);
+        if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+        while (true) {
+            parsedArray[itemCount] = parseJsonValue(parserState);
+            itemCount = itemCount + 1;
+            skipJsonWhitespace(parserState);
+            if (parserState.sourceText[parserState.position] === ",") { parserState.position = parserState.position + 1; }
+            else if (parserState.sourceText[parserState.position] === "]") { parserState.position = parserState.position + 1; return parsedArray; }
+            else { throw "bad json"; }
+        }
+    }
+    if (firstChar === "\"") { return parseJsonString(parserState); }
+    if (firstChar === "t") { return parseJsonKeyword(parserState, "true", true); }
+    if (firstChar === "f") { return parseJsonKeyword(parserState, "false", false); }
+    if (firstChar === "n") { return parseJsonKeyword(parserState, "null", null); }
+    numberText = "";
+    while (parserState.position < parserState.sourceText.length &&
+           (parserState.sourceText[parserState.position] === "-" || parserState.sourceText[parserState.position] === "+" ||
+            parserState.sourceText[parserState.position] === "." || parserState.sourceText[parserState.position] === "e" ||
+            parserState.sourceText[parserState.position] === "E" ||
+            (parserState.sourceText[parserState.position] >= "0" && parserState.sourceText[parserState.position] <= "9"))) {
+        numberText = numberText + parserState.sourceText[parserState.position];
+        parserState.position = parserState.position + 1;
+    }
+    if (numberText === "") { throw "bad json"; }
+    return Number(numberText);
+}
+//  Turns JSON text back into a value. Throws an error if the text is not valid JSON
+function parseJson(jsonText) {
+    var parserState = { sourceText: String(jsonText), position: 0 };
+    var parsedValue = parseJsonValue(parserState);
+    skipJsonWhitespace(parserState);
+    if (parserState.position < parserState.sourceText.length) { throw "bad json"; }
+    return parsedValue;
+}
+
+/* ---- dates and money ---- */
+//  Adds a zero in front of a number that has one digit (5 becomes 05)
+function padTwoDigits(numberValue) { return numberValue < 10 ? "0" + numberValue : String(numberValue); }
+//  Turns a time in milliseconds into an ISO date text (uses today if no value is given)
+function millisecondsToIsoString(millisecondsValue) {
+    var dateObject;
+    var millisecondsPart;
+    if (millisecondsValue === undefined) { millisecondsValue = new Date().getTime(); }
+    dateObject = new Date(millisecondsValue);
+    millisecondsPart = dateObject.getUTCMilliseconds();
+    return dateObject.getUTCFullYear() + "-" + padTwoDigits(dateObject.getUTCMonth() + 1) + "-" +
+        padTwoDigits(dateObject.getUTCDate()) + "T" + padTwoDigits(dateObject.getUTCHours()) + ":" +
+        padTwoDigits(dateObject.getUTCMinutes()) + ":" + padTwoDigits(dateObject.getUTCSeconds()) + "." +
+        (millisecondsPart < 10 ? "00" + millisecondsPart : (millisecondsPart < 100 ? "0" + millisecondsPart : String(millisecondsPart))) + "Z";
+}
+//  Turns an ISO date text back into milliseconds. Returns NaN if the text is too short
+function isoStringToMilliseconds(isoText) {
+    var yearNumber;
+    var monthNumber;
+    var dayNumber;
+    var adjustedYear;
+    var eraNumber;
+    var yearOfEra;
+    var dayOfYear;
+    var dayOfEra;
+    var millisecondsPart = 0;
+    if (typeof isoText !== "string" || isoText.length < 19) { return NOT_A_NUMBER; }
+    yearNumber = Number(copySubstring(isoText, 0, 4));
+    monthNumber = Number(copySubstring(isoText, 5, 7));
+    dayNumber = Number(copySubstring(isoText, 8, 10));
+    if (isoText.length >= 23 && isoText[19] === ".") { millisecondsPart = Number(copySubstring(isoText, 20, 23)); }
+    adjustedYear = monthNumber <= 2 ? yearNumber - 1 : yearNumber;
+    eraNumber = floorNumber(adjustedYear / 400);
+    yearOfEra = adjustedYear - eraNumber * 400;
+    dayOfYear = floorNumber((153 * (monthNumber > 2 ? monthNumber - 3 : monthNumber + 9) + 2) / 5) + dayNumber - 1;
+    dayOfEra = yearOfEra * 365 + floorNumber(yearOfEra / 4) - floorNumber(yearOfEra / 100) + dayOfYear;
+    return (eraNumber * 146097 + dayOfEra - 719468) * 86400000 +
+        Number(copySubstring(isoText, 11, 13)) * 3600000 + Number(copySubstring(isoText, 14, 16)) * 60000 +
+        Number(copySubstring(isoText, 17, 19)) * 1000 + millisecondsPart;
+}
+//  Shows an ISO date as a friendly text, like Oct 1, 3:05 PM
+function formatTimestamp(isoText) {
+    var dateObject = new Date(isoStringToMilliseconds(isoText));
+    var hourNumber = dateObject.getHours();
+    var meridiemText = hourNumber >= 12 ? "PM" : "AM";
+    hourNumber = hourNumber % 12;
+    if (hourNumber === 0) { hourNumber = 12; }
+    return MONTH_ABBREVIATIONS[dateObject.getMonth()] + " " + dateObject.getDate() + ", " + hourNumber + ":" +
+        padTwoDigits(dateObject.getMinutes()) + " " + meridiemText;
+}
+//  Shows a number as pesos with commas, like ₱1,250.50
+function formatPeso(amountNumber) {
+    var isNegative = amountNumber < 0;
+    var totalCents;
+    var wholePesos;
+    var centsPart;
+    var digitsText;
+    var groupedText = "";
+    var digitIndex;
+    if (isNegative) { amountNumber = -amountNumber; }
+    totalCents = roundNumber(amountNumber * 100);
+    wholePesos = floorNumber(totalCents / 100);
+    centsPart = totalCents - wholePesos * 100;
+    digitsText = String(wholePesos);
+    for (digitIndex = 0; digitIndex < digitsText.length; digitIndex = digitIndex + 1) {
+        if (digitIndex > 0 && (digitsText.length - digitIndex) % 3 === 0) { groupedText = groupedText + ","; }
+        groupedText = groupedText + digitsText[digitIndex];
+    }
+    if (centsPart > 0) { groupedText = groupedText + "." + (centsPart % 10 === 0 ? String(centsPart / 10) : padTwoDigits(centsPart)); }
+    return (isNegative ? "-" : "") + "\u20B1" + groupedText;
+}
+
+
+//  Checks if a list contains a value (simple loop, no built-in search)
+function arrayContainsValue(sourceArray, targetValue) {
+    var index;
+    for (index = 0; index < sourceArray.length; index = index + 1) {
+        if (sourceArray[index] === targetValue) { return true; }
+    }
+    return false;
+}
+
+
+/* ==========================================================================
+   1. SHARED CONSTANTS (copied from constants.js, never retyped)
+   ========================================================================== */
+var SERVICE_TYPES = {
+    DOCUMENT_PRINTING: "Document Printing",
+    BOOKBINDING: "Bookbinding"
+};
+var SERVICE_OPTIONS = {
+    SPIRAL_BINDING: "Spiral Binding",
+    PERFECT_BINDING: "Perfect Binding",
+    LAMINATION: "Lamination",
+    NONE: "None"
+};
+var PROMO_TYPES = {
+    NONE: "None",
+    BULK_DISCOUNT: "Bulk Discount",
+    REGULAR_CUSTOMER_DISCOUNT: "Regular Customer Discount",
+    SEASONAL_PROMO: "Seasonal Promo"
+};
+var COLOR_TIERS = {
+    BLACK_TEXT: "Black Text",
+    MINIMAL_COLOR: "Minimal Color",
+    SMALL_IMAGE: "Small Image",
+    FULL_COLOR: "Full Color"
+};
+var PRICE_PER_PAGE = {};
+PRICE_PER_PAGE[COLOR_TIERS.BLACK_TEXT] = 3;
+PRICE_PER_PAGE[COLOR_TIERS.MINIMAL_COLOR] = 5;
+PRICE_PER_PAGE[COLOR_TIERS.SMALL_IMAGE] = 10;
+PRICE_PER_PAGE[COLOR_TIERS.FULL_COLOR] = 20;
+
+var ORDER_CHANNELS = { MESSENGER: "Messenger", EMAIL: "Email", IN_PERSON: "In Person", BLUETOOTH: "Bluetooth" };
+var QUEUE_TYPES = { WALK_IN: "walkIn", ADVANCE: "advance" };
+var ORDER_STATUS = { QUEUED: "queued", PRINTING: "printing", DONE: "done", UNCLAIMED: "unclaimed", CANCELLED: "cancelled" };
+var PAYMENT_STATUS = { PENDING: "pending", DOWN_PAYMENT_PAID: "downPaymentPaid", FULLY_PAID: "fullyPaid" };
+var INVENTORY_CATEGORIES = {
+    BOND_PAPER: "Bond Paper",
+    PHOTO_PAPER: "Photo Paper",
+    SPECIALTY_PAPER: "Specialty Paper",
+    INK_TONER: "Ink/Toner",
+    BINDING_MATERIALS: "Binding Materials",
+    LAMINATION_MATERIALS: "Lamination Materials"
+};
+
+// The md names NEW_ORDER, RUSH_ORDER and ORDER_READY as Module 5 triggers,
+// but constants.js only has the first two entries. Add the rest there first.
+var NOTIFICATION_TYPES = {
+    UNCLAIMED_ORDER: "UnclaimedOrder",
+    LOW_STOCK: "LowStock",
+    NEW_ORDER: "NewOrder",
+    RUSH_ORDER: "RushOrder",
+    ORDER_READY: "OrderReady"
+};
+var UNCLAIMED_THRESHOLD_DAYS = 3;
+
+/* ---- constants used only by the modules (see SCHEMA_ADDITIONS.md) ---- */
+var RECIPIENT_TYPES = { STAFF: "Staff", CUSTOMER: "Customer", BOTH: "Both" };
+var STOCK_UNITS = { REAM: "ream", REAMS: "reams", PIECES: "pcs" };
+var MATERIAL_OTHER_OPTION = "Others";
+var VALIDATION_RESULTS = { VALID: "Valid", MISSING: "Missing", CORRUPTED: "Corrupted" };
+
+var PIECES_PER_REAM = 500;
+var DEFAULT_REORDER_LEVEL = 5;
+var MILLISECONDS_PER_DAY = 86400000;
+var LANE_CAPACITY = 100;
+
+var OPTIONS_FOR_SERVICE = {};
+OPTIONS_FOR_SERVICE[SERVICE_TYPES.DOCUMENT_PRINTING] = [SERVICE_OPTIONS.NONE, SERVICE_OPTIONS.LAMINATION];
+OPTIONS_FOR_SERVICE[SERVICE_TYPES.BOOKBINDING] = [SERVICE_OPTIONS.SPIRAL_BINDING, SERVICE_OPTIONS.PERFECT_BINDING];
+
+var ORDERS_SNAPSHOT_KEY = "gsj_orders_snapshot";
+var ORDER_ID_HANDOFF_KEY = "gsj_order_id_handoff";
+var APP_STATE_KEY = "gsj_order_management_state";
+var INVENTORY_SNAPSHOT_KEY = "gsj_inventory_snapshot";
+
+
+/* ==========================================================================
+   2. DATA STRUCTURES (hand-built)
+   ========================================================================== */
+function createLinkedList() { return { head: null, size: 0 }; }
+
+function linkedListInsertAtHead(listRef, itemValue) {
+    listRef.head = { value: itemValue, next: listRef.head };
+    listRef.size = listRef.size + 1;
+}
+
+function linkedListFindOrder(listRef, targetOrderId) {
+    var currentNode = listRef.head;
+    while (currentNode !== null) {
+        if (currentNode.value.orderId === targetOrderId) { return currentNode.value; }
+        currentNode = currentNode.next;
+    }
+    return null;
+}
+
+function createCircularQueue(capacityNumber) {
+    var slotsData = [];
+    var slotIndex;
+    for (slotIndex = 0; slotIndex < capacityNumber; slotIndex = slotIndex + 1) { slotsData[slotIndex] = null; }
+    return { slots: slotsData, capacity: capacityNumber, front: 0, rear: -1, count: 0 };
+}
+function queueIsEmpty(queueRef) { return queueRef.count === 0; }
+function queueIsFull(queueRef) { return queueRef.count === queueRef.capacity; }
+function queueEnqueue(queueRef, itemValue) {
+    if (queueIsFull(queueRef)) { return false; }
+    queueRef.rear = (queueRef.rear + 1) % queueRef.capacity;
+    queueRef.slots[queueRef.rear] = itemValue;
+    queueRef.count = queueRef.count + 1;
+    return true;
+}
+function queueDequeue(queueRef) {
+    if (queueIsEmpty(queueRef)) { return null; }
+    var frontItem = queueRef.slots[queueRef.front];
+    queueRef.slots[queueRef.front] = null;
+    queueRef.front = (queueRef.front + 1) % queueRef.capacity;
+    queueRef.count = queueRef.count - 1;
+    return frontItem;
+}
+function queuePeek(queueRef) { return queueIsEmpty(queueRef) ? null : queueRef.slots[queueRef.front]; }
+function queueItemAt(queueRef, offsetNumber) { return queueRef.slots[(queueRef.front + offsetNumber) % queueRef.capacity]; }
+function queueRemoveItem(queueRef, targetItem) {
+    var originalCount = queueRef.count;
+    var passIndex;
+    for (passIndex = 0; passIndex < originalCount; passIndex = passIndex + 1) {
+        var movedItem = queueDequeue(queueRef);
+        if (movedItem !== targetItem) { queueEnqueue(queueRef, movedItem); }
+    }
+}
+function queuePositionOf(queueRef, targetItem) {
+    var positionIndex;
+    for (positionIndex = 0; positionIndex < queueRef.count; positionIndex = positionIndex + 1) {
+        if (queueItemAt(queueRef, positionIndex) === targetItem) { return positionIndex + 1; }
+    }
+    return 0;
+}
+
+function createStack() { return { stackData: [], stackCount: 0 }; }
+function stackPush(stackRef, itemValue) {
+    stackRef.stackData[stackRef.stackCount] = itemValue;
+    stackRef.stackCount = stackRef.stackCount + 1;
+}
+function stackGetFromTop(stackRef, offsetFromTop) { return stackRef.stackData[stackRef.stackCount - 1 - offsetFromTop]; }
+
+
+/* ==========================================================================
+   3. STATE
+   ========================================================================== */
+var ordersList = createLinkedList();
+var walkInQueue = createCircularQueue(LANE_CAPACITY);
+var advanceQueue = createCircularQueue(LANE_CAPACITY);
+var notificationsStack = createStack();
+
+var nextOrderId = 1;
+var nextNotificationId = 1;
+var dayOffset = 0;
+var lastFocusedElement = null;
+
+
+/* ==========================================================================
+   3b. SHARED STORE (window.GSJ_STORE)
+   ========================================================================== */
+var sharedStore = {
+    findOrderById: function (orderIdNumber) { return linkedListFindOrder(ordersList, orderIdNumber); },
+
+    walkOrders: function (visitFunction) {
+        var currentNode = ordersList.head;
+        while (currentNode !== null) { visitFunction(currentNode.value); currentNode = currentNode.next; }
+    },
+
+    formatOrderId: formatOrderId,
+    nowIso: getShopIsoDate,
+
+    orderDoneHandlers: createLinkedList(),
+
+    registerOrderDoneHandler: function (handlerFunction) {
+        linkedListInsertAtHead(sharedStore.orderDoneHandlers, handlerFunction);
+    },
+
+    emitOrderDone: function (finishedOrder) {
+        var currentNode = sharedStore.orderDoneHandlers.head;
+        while (currentNode !== null) { currentNode.value(finishedOrder); currentNode = currentNode.next; }
+    },
+
+    fileBridge: null,
+
+    registerFileBridge: function (bridgeObject) {
+        sharedStore.fileBridge = bridgeObject;
+        applySnapshotFileFields();
+        renderAll();
+    },
+
+    applyFileSummary: function (orderIdNumber, fileSummary) {
+        var liveOrder = linkedListFindOrder(ordersList, orderIdNumber);
+        if (liveOrder === null || !fileSummary) { return; }
+        liveOrder.fileName = fileSummary.fileName === undefined ? liveOrder.fileName : fileSummary.fileName;
+        liveOrder.fileCount = isFiniteNumber(fileSummary.fileCount) ? fileSummary.fileCount : liveOrder.fileCount;
+        liveOrder.fileChannel = fileSummary.fileChannel === undefined ? liveOrder.fileChannel : fileSummary.fileChannel;
+        liveOrder.fileDisposed = !!fileSummary.fileDisposed;
+        liveOrder.dateDisposed = fileSummary.dateDisposed === undefined ? liveOrder.dateDisposed : fileSummary.dateDisposed;
+        saveSnapshot();
+        renderAll();
+    },
+
+    requestRender: function () { renderAll(); }
+};
+window.GSJ_STORE = sharedStore;
+
+
+/* ==========================================================================
+   4. ELEMENT REFERENCES
+   ========================================================================== */
+var orderModal          = document.getElementById("order-modal");
+var orderTableBody      = document.getElementById("order-table-body");
+var notificationListElement = document.getElementById("notification-list");
+var searchInput         = document.getElementById("search-input");
+var nextButton          = document.getElementById("next-btn");
+var queueHint           = document.getElementById("queue-hint");
+
+var customerNameInput   = document.getElementById("customerName");
+var subjectInput        = document.getElementById("subject");
+var serviceTypeInput    = document.getElementById("serviceType");
+var serviceOptionInput  = document.getElementById("serviceOption");
+var paperSizeInput      = document.getElementById("paperSize");
+var paperSizeOtherInput = document.getElementById("paperSizeOther");
+var colorTierInput      = document.getElementById("colorTier");
+var fileChannelInput    = document.getElementById("fileChannel");
+var pagesInput          = document.getElementById("pages");
+var copiesInput         = document.getElementById("copies");
+var isRushInput         = document.getElementById("isRush");
+var notesInput          = document.getElementById("notes");
+var ratePreview         = document.getElementById("rate-preview");
+var totalPreview        = document.getElementById("total-preview");
+var orderError          = document.getElementById("order-error");
+
+
+/* ==========================================================================
+   5. TEXT, NUMBER & TIME HELPERS
+   ========================================================================== */
+function padLeft(rawValue, targetWidth) {
+    var textValue = String(rawValue);
+    while (textValue.length < targetWidth) { textValue = "0" + textValue; }
+    return textValue;
+}
+function formatOrderId(orderIdNumber) { return "ORD-" + padLeft(orderIdNumber, 4); }
+function getShopNowMs() { return new Date().getTime() + dayOffset * MILLISECONDS_PER_DAY; }
+function getShopIsoDate() { return millisecondsToIsoString(getShopNowMs()); }
+
+function populateSelect(selectElement, valuesObject) {
+    var keyName;
+    for (keyName in valuesObject) {
+        var optionElement = document.createElement("option");
+        optionElement.value = valuesObject[keyName];
+        optionElement.textContent = valuesObject[keyName];
+        selectElement.appendChild(optionElement);
+    }
+}
+
+
+/* ==========================================================================
+   6. PRICING & VALIDATION
+   ========================================================================== */
+function calculateBasePrice(colorTierText, pageCount, copyCount) {
+    return PRICE_PER_PAGE[colorTierText] * pageCount * copyCount;
+}
+
+// MODULE 10 HOOK — returns a Promotion.promoId (null means no promo) and the discount amount
+function applyPromo(baseTotalPrice) {
+    return { promoId: null, discountAmount: 0 };
+}
+
+function validateOrder(orderDraft) {
+    if (!orderDraft.customerName) { return "Enter the customer name."; }
+    if (!orderDraft.paperSize) { return "Enter the paper size."; }
+    if (!isWholeNumber(orderDraft.pages) || orderDraft.pages < 1) { return "Pages must be a whole number of 1 or more."; }
+    if (!isWholeNumber(orderDraft.copies) || orderDraft.copies < 1) { return "Copies must be a whole number of 1 or more."; }
+
+    var validServiceTypes = [SERVICE_TYPES.DOCUMENT_PRINTING, SERVICE_TYPES.BOOKBINDING];
+    if (!arrayContainsValue(validServiceTypes, orderDraft.serviceType)) { return "Pick a valid service."; }
+
+    var allowedOptions = OPTIONS_FOR_SERVICE[orderDraft.serviceType];
+    if (!allowedOptions || !arrayContainsValue(allowedOptions, orderDraft.serviceOption)) {
+        return "That option is not offered for this service.";
+    }
+
+    var validTiers = [COLOR_TIERS.BLACK_TEXT, COLOR_TIERS.MINIMAL_COLOR, COLOR_TIERS.SMALL_IMAGE, COLOR_TIERS.FULL_COLOR];
+    if (!arrayContainsValue(validTiers, orderDraft.colorTier)) { return "Pick a valid color tier."; }
+
+    var validChannels = [ORDER_CHANNELS.MESSENGER, ORDER_CHANNELS.EMAIL, ORDER_CHANNELS.IN_PERSON, ORDER_CHANNELS.BLUETOOTH];
+    if (!arrayContainsValue(validChannels, orderDraft.fileChannel)) { return "Pick a valid receiving channel."; }
+
+    return "";
+}
+
+
+/* ==========================================================================
+   7. QUEUE RULES
+   ========================================================================== */
+function getLaneQueue(queueTypeText) {
+    return queueTypeText === QUEUE_TYPES.ADVANCE ? advanceQueue : walkInQueue;
+}
+function getNextUpOrder() {
+    if (!queueIsEmpty(advanceQueue)) { return queuePeek(advanceQueue); }
+    return queuePeek(walkInQueue);
+}
+function getWaitingCount() { return advanceQueue.count + walkInQueue.count; }
+
+
+/* ==========================================================================
+   8. ALERTS
+   ========================================================================== */
+function addNotification(typeText, relatedOrderIdNumber, messageText, recipientTypeText) {
+    stackPush(notificationsStack, {
+        notificationId: nextNotificationId,
+        type: typeText,
+        relatedOrderId: relatedOrderIdNumber,
+        relatedItemId: null,
+        isBroadcast: false,
+        recipientType: recipientTypeText,
+        message: messageText,
+        isRead: false,
+        dateCreated: getShopIsoDate()
+    });
+    nextNotificationId = nextNotificationId + 1;
+}
+
+
+/* ==========================================================================
+   9. INVENTORY LINK (reads Module 6's localStorage snapshot)
+   ========================================================================== */
+function readInventorySnapshot() {
+    try {
+        var rawText = localStorage.getItem(INVENTORY_SNAPSHOT_KEY);
+        return rawText === null ? null : parseJson(rawText);
+    } catch (readError) { return null; }
+}
+
+function getInventoryRows(snapshotObject) {
+    if (snapshotObject && isArrayLike(snapshotObject.items)) { return snapshotObject.items; }
+    return null;
+}
+
+function normalizePaperKey(paperText) { return toLowerCaseText(trimWhitespace(paperText || "")); }
+
+function getInventoryStockValue(inventoryRow) {
+    if (!inventoryRow) { return NOT_A_NUMBER; }
+    var stockValue = inventoryRow.quantityOnHand;
+    if (stockValue === undefined || stockValue === null || trimWhitespace(stockValue) === "") { return NOT_A_NUMBER; }
+    stockValue = Number(stockValue);
+    return isFiniteNumber(stockValue) ? stockValue : NOT_A_NUMBER;
+}
+
+function getInventoryPiecesPerUnit(inventoryRow) {
+    var unitText = toLowerCaseText(trimWhitespace((inventoryRow && inventoryRow.unit) || ""));
+    return (unitText === STOCK_UNITS.REAM || unitText === STOCK_UNITS.REAMS) ? PIECES_PER_REAM : 1;
+}
+
+function getInventoryStockInPieces(inventoryRow) {
+    var stockValue = getInventoryStockValue(inventoryRow);
+    return isFiniteNumber(stockValue) ? stockValue * getInventoryPiecesPerUnit(inventoryRow) : NOT_A_NUMBER;
+}
+
+function getInventoryThresholdValue(inventoryRow) {
+    if (!inventoryRow) { return NOT_A_NUMBER; }
+    var thresholdValue = inventoryRow.reorderThreshold;
+    if (thresholdValue === undefined || thresholdValue === null || trimWhitespace(thresholdValue) === "") { return NOT_A_NUMBER; }
+    thresholdValue = Number(thresholdValue);
+    return isFiniteNumber(thresholdValue) ? thresholdValue : NOT_A_NUMBER;
+}
+
+function rowMatchesPaper(inventoryRow, paperKey) {
+    if (!inventoryRow || (inventoryRow.category !== INVENTORY_CATEGORIES.BOND_PAPER &&
+                          inventoryRow.category !== INVENTORY_CATEGORIES.PHOTO_PAPER &&
+                          inventoryRow.category !== INVENTORY_CATEGORIES.SPECIALTY_PAPER)) {
+        return false;
+    }
+    return normalizePaperKey(inventoryRow.materialDetail || "") === paperKey ||
+        normalizePaperKey(inventoryRow.itemName || "") === paperKey;
+}
+
+function findInventoryPaperRow(paperNameText, requiredQuantity) {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var paperKey = normalizePaperKey(paperNameText);
+    var neededQuantity = requiredQuantity === undefined ? 1 : requiredQuantity;
+    var fallbackRow = null;
+    var rowIndex;
+    if (inventoryRows === null || paperKey === "") { return null; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var inventoryRow = inventoryRows[rowIndex];
+        if (!rowMatchesPaper(inventoryRow, paperKey)) { continue; }
+
+        var stockInPieces = getInventoryStockInPieces(inventoryRow);
+        if (!isFiniteNumber(stockInPieces) || stockInPieces < neededQuantity) { continue; }
+
+        if (inventoryRow.category === INVENTORY_CATEGORIES.BOND_PAPER) { return inventoryRow; }
+        if (fallbackRow === null) { fallbackRow = inventoryRow; }
+    }
+    return fallbackRow;
+}
+
+// NaN when Inventory has no record for this paper
+function getInventoryPaperStock(paperNameText, requiredQuantity) {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var paperKey = normalizePaperKey(paperNameText);
+    var largestStock = NOT_A_NUMBER;
+    var rowIndex;
+
+    if (requiredQuantity !== undefined) {
+        var suitableRow = findInventoryPaperRow(paperNameText, requiredQuantity);
+        return suitableRow === null ? NOT_A_NUMBER : getInventoryStockInPieces(suitableRow);
+    }
+
+    if (inventoryRows === null || paperKey === "") { return NOT_A_NUMBER; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var inventoryRow = inventoryRows[rowIndex];
+        if (!rowMatchesPaper(inventoryRow, paperKey)) { continue; }
+
+        var stockInPieces = getInventoryStockInPieces(inventoryRow);
+        if (isFiniteNumber(stockInPieces) && (!isFiniteNumber(largestStock) || stockInPieces > largestStock)) {
+            largestStock = stockInPieces;
+        }
+    }
+    return largestStock;
+}
+
+// available ONLY when Inventory has a record for this paper with enough stock.
+// No record (or no snapshot) = not available.
+function isPaperSizeAvailable(paperNameText, requiredQuantity) {
+    var neededQuantity = requiredQuantity === undefined ? 1 : requiredQuantity;
+    var availableStock = getInventoryPaperStock(paperNameText, neededQuantity);
+    return isFiniteNumber(availableStock) && availableStock >= neededQuantity;
+}
+
+function refreshPaperSizeAvailability() {
+    var optionIndex;
+    for (optionIndex = 0; optionIndex < paperSizeInput.options.length; optionIndex = optionIndex + 1) {
+        var optionElement = paperSizeInput.options[optionIndex];
+        // "Others" stays clickable so staff can type a size; the typed size is checked below
+        optionElement.disabled = optionElement.value === MATERIAL_OTHER_OPTION ? false : !isPaperSizeAvailable(optionElement.value);
+    }
+    if (paperSizeInput.selectedIndex < 0 || paperSizeInput.options[paperSizeInput.selectedIndex].disabled) {
+        for (optionIndex = 0; optionIndex < paperSizeInput.options.length; optionIndex = optionIndex + 1) {
+            if (!paperSizeInput.options[optionIndex].disabled) { paperSizeInput.selectedIndex = optionIndex; break; }
+        }
+    }
+    paperSizeOtherInput.hidden = paperSizeInput.value !== MATERIAL_OTHER_OPTION;
+}
+
+function getPaperWarningText() {
+    var paperName = paperSizeInput.value;
+    if (paperName === MATERIAL_OTHER_OPTION) { paperName = trimWhitespace(paperSizeOtherInput.value); }
+    if (paperName !== "" && !isPaperSizeAvailable(paperName)) {
+        return "This paper size is not available in Inventory Management.";
+    }
+    return "";
+}
+
+// Check only. Module 6 deducts the stock itself when the order is Done
+// (receiveCompletedOrderUsage), so deducting here too would count it twice.
+function consumeOrderPaper(orderRecord) {
+    var sheetsNeeded = Number(orderRecord.pages) * Number(orderRecord.copies);
+    if (!isWholeNumber(sheetsNeeded) || sheetsNeeded < 1) {
+        return { ok: false, message: "Could not determine the number of sheets needed for this order." };
+    }
+
+    var inventoryRow = findInventoryPaperRow(orderRecord.paperSize, sheetsNeeded);
+    if (inventoryRow === null) {
+        var availableStock = getInventoryPaperStock(orderRecord.paperSize);
+        if (!isFiniteNumber(availableStock)) {
+            return { ok: false, message: "No usable stock record was found for " + orderRecord.paperSize + " in Inventory Management." };
+        }
+        return { ok: false, message: "Insufficient " + orderRecord.paperSize + " paper in Inventory Management. Need " + sheetsNeeded + ", available " + availableStock + "." };
+    }
+    return { ok: true };
+}
+
+function getInventoryLowStockCount() {
+    var inventoryRows = getInventoryRows(readInventorySnapshot());
+    var lowCount = 0;
+    var rowIndex;
+    if (inventoryRows === null) { return 0; }
+    for (rowIndex = 0; rowIndex < inventoryRows.length; rowIndex = rowIndex + 1) {
+        var quantityInPieces = getInventoryStockInPieces(inventoryRows[rowIndex]);
+        var thresholdValue = getInventoryThresholdValue(inventoryRows[rowIndex]);
+        if (isFiniteNumber(quantityInPieces) &&
+            (isFiniteNumber(thresholdValue) ? quantityInPieces <= thresholdValue : quantityInPieces <= DEFAULT_REORDER_LEVEL)) {
+            lowCount = lowCount + 1;
+        }
+    }
+    return lowCount;
+}
+
+
+/* ==========================================================================
+   10. ORDER ACTIONS
+   ========================================================================== */
+function saveOrder() {
+    var newOrder = {
+        orderId: nextOrderId,
+        customerId: null,
+        customerName: trimWhitespace(customerNameInput.value),
+        subject: trimWhitespace(subjectInput.value),
+        notes: trimWhitespace(notesInput.value),
+        serviceType: serviceTypeInput.value,
+        serviceOption: serviceOptionInput.value,
+        paperSize: paperSizeInput.value === MATERIAL_OTHER_OPTION ? trimWhitespace(paperSizeOtherInput.value) : paperSizeInput.value,
+        colorTier: colorTierInput.value,
+        pages: Number(pagesInput.value),
+        copies: Number(copiesInput.value),
+        fileChannel: fileChannelInput.value,
+        isRush: isRushInput.checked
+    };
+
+    var errorText = validateOrder(newOrder);
+
+    if (errorText === "" && !isPaperSizeAvailable(newOrder.paperSize)) {
+        errorText = "This paper size is not available in Inventory Management.";
+    }
+
+    if (errorText === "" && !isPaperSizeAvailable(newOrder.paperSize, newOrder.pages * newOrder.copies)) {
+        errorText = "Not enough " + newOrder.paperSize + " paper. Need " + (newOrder.pages * newOrder.copies) +
+            ", available " + getInventoryPaperStock(newOrder.paperSize) + ".";
+    }
+
+    if (errorText === "") {
+        newOrder.queueType = newOrder.isRush ? QUEUE_TYPES.ADVANCE : QUEUE_TYPES.WALK_IN;
+        if (queueIsFull(getLaneQueue(newOrder.queueType))) {
+            errorText = "The " + (newOrder.isRush ? "rush" : "walk-in") + " lane is full. Finish or cancel an order first.";
+        }
+    }
+
+    orderError.textContent = errorText;
+    if (errorText !== "") { return; }
+
+    newOrder.status = ORDER_STATUS.QUEUED;
+    newOrder.pricePerPage = PRICE_PER_PAGE[newOrder.colorTier];
+    newOrder.baseTotalPrice = calculateBasePrice(newOrder.colorTier, newOrder.pages, newOrder.copies);
+
+    var promoResult = applyPromo(newOrder.baseTotalPrice);
+    newOrder.promoId = promoResult.promoId;
+    newOrder.discountAmount = promoResult.discountAmount;
+    newOrder.totalPrice = newOrder.baseTotalPrice - newOrder.discountAmount;
+
+    newOrder.fileName = null;
+    newOrder.fileCount = 0;
+    newOrder.priorityLevel = null;
+    newOrder.requiresDownPayment = false;
+    newOrder.downPaymentAmount = 0;
+    newOrder.paymentMethod = null;
+    newOrder.paymentStatus = PAYMENT_STATUS.PENDING;
+    newOrder.proofOfPaymentFile = null;
+    newOrder.fileDisposed = false;
+    newOrder.dateDisposed = null;
+
+    newOrder.dateAdded = getShopIsoDate();
+    newOrder.dateCompleted = null;
+    newOrder.unclaimedReason = null;
+    newOrder.daysUnclaimed = null;
+
+    nextOrderId = nextOrderId + 1;
+    linkedListInsertAtHead(ordersList, newOrder);
+    queueEnqueue(getLaneQueue(newOrder.queueType), newOrder);
+
+    // MODULE 3 HOOK — log the order submission here.
+
+    addNotification(NOTIFICATION_TYPES.NEW_ORDER, newOrder.orderId,
+        "Order " + formatOrderId(newOrder.orderId) + " (" + newOrder.customerName +
+        ") added to the " + (newOrder.isRush ? "rush" : "walk-in") + " lane", RECIPIENT_TYPES.STAFF);
+
+    if (newOrder.isRush) {
+        addNotification(NOTIFICATION_TYPES.RUSH_ORDER, newOrder.orderId,
+            "Rush order " + formatOrderId(newOrder.orderId) + " (" + newOrder.customerName +
+            ") needs urgent printing", RECIPIENT_TYPES.STAFF);
+    }
+
+    closeOrderModal();
+    commitChanges();
+}
+
+function startNextOrder() {
+    var nextUpOrder = getNextUpOrder();
+    if (nextUpOrder === null) { return; }
+
+    var inventoryResult = consumeOrderPaper(nextUpOrder);
+    if (!inventoryResult.ok) {
+        queueHint.textContent = inventoryResult.message;
+        return;
+    }
+
+    queueDequeue(getLaneQueue(nextUpOrder.queueType));
+    setOrderStatus(nextUpOrder, ORDER_STATUS.PRINTING);
+    commitChanges();
+}
+
+function cancelOrder(targetOrder) {
+    if (targetOrder.status === ORDER_STATUS.QUEUED) {
+        queueRemoveItem(getLaneQueue(targetOrder.queueType), targetOrder);
+    }
+    setOrderStatus(targetOrder, ORDER_STATUS.CANCELLED);
+    commitChanges();
+}
+
+function setOrderStatus(targetOrder, newStatusText) {
+    targetOrder.status = newStatusText;
+
+    if (newStatusText === ORDER_STATUS.DONE) {
+        targetOrder.dateCompleted = getShopIsoDate();
+        targetOrder.daysUnclaimed = 0;
+
+        addNotification(NOTIFICATION_TYPES.ORDER_READY, targetOrder.orderId,
+            "Order " + formatOrderId(targetOrder.orderId) + " (" + targetOrder.customerName +
+            ") is ready for pickup", RECIPIENT_TYPES.CUSTOMER);
+
+        // MODULE 4: dispose stored files now that the order is Done
+        sharedStore.emitOrderDone(targetOrder);
+    }
+
+    // MODULE 3 HOOK — log the status change here.
+}
+
+function checkUnclaimedOrders() {
+    var currentNode = ordersList.head;
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        if (orderRecord.status === ORDER_STATUS.DONE || orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+            var elapsedMilliseconds = getShopNowMs() - isoStringToMilliseconds(orderRecord.dateCompleted);
+            orderRecord.daysUnclaimed = floorNumber(elapsedMilliseconds / MILLISECONDS_PER_DAY);
+
+            if (orderRecord.status === ORDER_STATUS.DONE && elapsedMilliseconds > UNCLAIMED_THRESHOLD_DAYS * MILLISECONDS_PER_DAY) {
+                setOrderStatus(orderRecord, ORDER_STATUS.UNCLAIMED);
+                orderRecord.unclaimedReason = "Not picked up after " + UNCLAIMED_THRESHOLD_DAYS + " days";
+                addNotification(NOTIFICATION_TYPES.UNCLAIMED_ORDER, orderRecord.orderId,
+                    "Order " + formatOrderId(orderRecord.orderId) + " (" + orderRecord.customerName +
+                    ") has waited over " + UNCLAIMED_THRESHOLD_DAYS + " days", RECIPIENT_TYPES.STAFF);
+            }
+        }
+        currentNode = currentNode.next;
+    }
+}
+
+function clearAllData() {
+    ordersList = createLinkedList();
+    walkInQueue = createCircularQueue(LANE_CAPACITY);
+    advanceQueue = createCircularQueue(LANE_CAPACITY);
+    notificationsStack = createStack();
+    nextOrderId = 1;
+    nextNotificationId = 1;
+    dayOffset = 0;
+    try { localStorage.removeItem(ORDERS_SNAPSHOT_KEY); } catch (snapshotError) {}
+    try { localStorage.removeItem(APP_STATE_KEY); } catch (stateError) {}
+    searchInput.value = "";
+
+    if (sharedStore.fileBridge !== null && sharedStore.fileBridge.onStoreReset) {
+        sharedStore.fileBridge.onStoreReset();
+    }
+    commitChanges();
+}
+
+
+/* ==========================================================================
+   11. RENDERING
+   ========================================================================== */
+function renderAll() {
+    renderStats();
+    renderTable();
+    renderNotifications();
+
+    var nextUpOrder = getNextUpOrder();
+    nextButton.disabled = nextUpOrder === null;
+    nextButton.textContent = nextUpOrder ? "Start next: " + formatOrderId(nextUpOrder.orderId) : "Queue is empty";
+
+    queueHint.textContent = "Rush lane: " + advanceQueue.count + " waiting · Walk-in lane: " + walkInQueue.count + " waiting";
+}
+
+function renderStats() {
+    var shopNow = new Date(getShopNowMs());
+    var startOfTodayMs = new Date(shopNow.getFullYear(), shopNow.getMonth(), shopNow.getDate()).getTime();
+    var ordersTodayCount = 0;
+    var revenueToday = 0;
+    var unclaimedCount = 0;
+    var currentNode = ordersList.head;
+
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        if (isoStringToMilliseconds(orderRecord.dateAdded) >= startOfTodayMs) {
+            ordersTodayCount = ordersTodayCount + 1;
+            if (orderRecord.status !== ORDER_STATUS.CANCELLED) { revenueToday = revenueToday + orderRecord.totalPrice; }
+        }
+        if (orderRecord.status === ORDER_STATUS.UNCLAIMED) { unclaimedCount = unclaimedCount + 1; }
+        currentNode = currentNode.next;
+    }
+
+    document.getElementById("stat-today").textContent = ordersTodayCount;
+    document.getElementById("stat-revenue").textContent = formatPeso(revenueToday);
+    document.getElementById("stat-queue").textContent = getWaitingCount();
+    document.getElementById("stat-lowstock").textContent = getInventoryLowStockCount();
+    document.getElementById("stat-unclaimed").textContent = unclaimedCount;
+}
+
+function renderTable() {
+    orderTableBody.textContent = "";
+
+    var queryText = toLowerCaseText(trimWhitespace(searchInput.value));
+    var nextUpOrder = getNextUpOrder();
+    var shownCount = 0;
+    var currentNode = ordersList.head;
+
+    while (currentNode !== null) {
+        var orderRecord = currentNode.value;
+        var haystackText = toLowerCaseText(
+            formatOrderId(orderRecord.orderId) + " " + orderRecord.customerName + " " + orderRecord.subject + " " +
+            orderRecord.serviceType + " " + orderRecord.serviceOption + " " + orderRecord.paperSize + " " +
+            orderRecord.colorTier + " " + orderRecord.status + " " +
+            (orderRecord.fileName === null || orderRecord.fileName === undefined ? "" : orderRecord.fileName) + " " +
+            (orderRecord.isRush ? "rush" : "walk-in")
+        );
+        if (textIncludes(haystackText, queryText)) {
+            orderTableBody.appendChild(buildOrderRow(orderRecord, nextUpOrder));
+            shownCount = shownCount + 1;
+        }
+        currentNode = currentNode.next;
+    }
+
+    if (shownCount === 0) {
+        var emptyRow = document.createElement("tr");
+        emptyRow.className = "empty-row";
+        var emptyCell = document.createElement("td");
+        emptyCell.colSpan = 9;
+        emptyCell.textContent = ordersList.size === 0 ? "No orders yet. Add the first one." : "No orders match your search.";
+        emptyRow.appendChild(emptyCell);
+        orderTableBody.appendChild(emptyRow);
+    }
+}
+
+function buildTextCell(valueText, labelText) {
+    var textCell = document.createElement("td");
+    textCell.setAttribute("data-label", labelText);
+    textCell.textContent = valueText;
+    return textCell;
+}
+
+function buildFileCell(orderRecord) {
+    var fileCell = document.createElement("td");
+    fileCell.setAttribute("data-label", "File (Module 4)");
+
+    var fileSummary = sharedStore.fileBridge === null
+        ? getSnapshotFileSummary(orderRecord.orderId)
+        : sharedStore.fileBridge.getFileSummary(orderRecord.orderId);
+
+    if (fileSummary === null || fileSummary === undefined) {
+        fileCell.textContent = "No file yet";
+        return fileCell;
+    }
+
+    var statusBadge = document.createElement("span");
+
+    if (fileSummary.fileDisposed) {
+        statusBadge.className = "badge badge-inactive";
+        statusBadge.textContent = "Disposed";
+        statusBadge.title = fileSummary.fileName + " — disposed per data-privacy rule";
+    } else if (fileSummary.validationResult === undefined || fileSummary.validationResult === VALIDATION_RESULTS.VALID) {
+        statusBadge.className = "badge badge-active";
+        statusBadge.textContent = VALIDATION_RESULTS.VALID;
+        statusBadge.title = fileSummary.fileName;
+    } else {
+        statusBadge.className = "badge badge-inactive";
+        statusBadge.textContent = fileSummary.validationResult;
+        statusBadge.title = fileSummary.fileName + " — " + fileSummary.flagReasonText;
+    }
+
+    fileCell.appendChild(statusBadge);
+    fileCell.appendChild(document.createTextNode(" " + fileSummary.fileName));
+    return fileCell;
+}
+
+function buildActionButton(labelText, classText, isDisabled, disabledHintText, onClickHandler) {
+    var buttonElement = document.createElement("button");
+    buttonElement.type = "button";
+    buttonElement.className = "btn " + classText + " btn-small";
+    buttonElement.textContent = labelText;
+    buttonElement.style.whiteSpace = "nowrap";
+    buttonElement.disabled = isDisabled;
+    if (isDisabled) { buttonElement.title = disabledHintText; }
+    buttonElement.addEventListener("click", onClickHandler);
+    return buttonElement;
+}
+
+function buildOrderRow(orderRecord, nextUpOrder) {
+    var orderRow = document.createElement("tr");
+    var isNextUp = nextUpOrder !== null && nextUpOrder.orderId === orderRecord.orderId;
+
+    if (isNextUp) { orderRow.style.background = "rgba(42, 125, 79, 0.14)"; }
+
+    var laneLabel = orderRecord.isRush ? "Rush" : "Walk-in";
+    var queueText = laneLabel;
+    if (orderRecord.status === ORDER_STATUS.QUEUED) {
+        queueText = laneLabel + " #" + queuePositionOf(getLaneQueue(orderRecord.queueType), orderRecord);
+    }
+
+    var customerText = orderRecord.customerName;
+    if (orderRecord.subject !== "") { customerText = customerText + " · " + orderRecord.subject; }
+
+    orderRow.appendChild(buildTextCell(formatOrderId(orderRecord.orderId), "Order ID"));
+    orderRow.appendChild(buildTextCell(customerText, "Customer"));
+    orderRow.appendChild(buildTextCell(orderRecord.serviceType, "Service"));
+    orderRow.appendChild(buildTextCell(orderRecord.serviceOption + " · " + orderRecord.paperSize + " · " +
+        orderRecord.colorTier + " · " + orderRecord.pages + " pages × " + orderRecord.copies + " copies", "Print details"));
+    orderRow.appendChild(buildFileCell(orderRecord));
+    orderRow.appendChild(buildTextCell(queueText, "Queue"));
+    orderRow.appendChild(buildTextCell(formatPeso(orderRecord.totalPrice), "Total"));
+
+    var statusCell = document.createElement("td");
+    statusCell.setAttribute("data-label", "Status");
+    var statusBadge = document.createElement("span");
+    var isProblem = orderRecord.status === ORDER_STATUS.CANCELLED || orderRecord.status === ORDER_STATUS.UNCLAIMED;
+    statusBadge.className = isProblem ? "badge badge-inactive" : "badge badge-active";
+    statusBadge.textContent = orderRecord.status;
+    if (orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+        statusBadge.textContent = orderRecord.status + " (" + orderRecord.daysUnclaimed + "d)";
+        statusBadge.title = orderRecord.unclaimedReason;
+    }
+    statusCell.appendChild(statusBadge);
+    orderRow.appendChild(statusCell);
+
+    var actionsCell = document.createElement("td");
+    actionsCell.setAttribute("data-label", "Actions");
+    actionsCell.className = "row-actions";
+    actionsCell.style.display = "flex";
+    actionsCell.style.gap = "6px";
+
+    if (orderRecord.status === ORDER_STATUS.QUEUED) {
+        actionsCell.appendChild(buildActionButton("Start", "btn-secondary", !isNextUp,
+            "An earlier order or a rush order goes first", startNextOrder));
+        actionsCell.appendChild(buildActionButton("Cancel", "btn-danger", false, "", function () {
+            cancelOrder(orderRecord);
+        }));
+    }
+
+    if (orderRecord.status === ORDER_STATUS.PRINTING) {
+        actionsCell.appendChild(buildActionButton("Done", "btn-secondary", false, "", function () {
+            setOrderStatus(orderRecord, ORDER_STATUS.DONE);
+            commitChanges();
+        }));
+    }
+
+    if (orderRecord.status === ORDER_STATUS.UNCLAIMED) {
+        actionsCell.appendChild(buildActionButton("Cancel", "btn-danger", false, "", function () {
+            cancelOrder(orderRecord);
+        }));
+    }
+
+    orderRow.appendChild(actionsCell);
+    return orderRow;
+}
+
+function buildFeedItem(labelText, detailText, timeText) {
+    var itemElement = document.createElement("li");
+    itemElement.className = "activity-item";
+
+    var labelSpan = document.createElement("span");
+    labelSpan.className = "badge badge-role";
+    labelSpan.textContent = labelText;
+
+    var detailSpan = document.createElement("span");
+    detailSpan.className = "activity-text";
+    detailSpan.textContent = detailText;
+
+    var timeSpan = document.createElement("span");
+    timeSpan.className = "activity-time";
+    timeSpan.textContent = timeText;
+
+    itemElement.appendChild(labelSpan);
+    itemElement.appendChild(detailSpan);
+    itemElement.appendChild(timeSpan);
+    return itemElement;
+}
+
+function renderNotifications() {
+    notificationListElement.textContent = "";
+
+    if (notificationsStack.stackCount === 0) {
+        notificationListElement.appendChild(buildFeedItem("None", "No alerts yet.", ""));
+        return;
+    }
+
+    var offsetIndex;
+    for (offsetIndex = 0; offsetIndex < notificationsStack.stackCount; offsetIndex = offsetIndex + 1) {
+        var notificationRecord = stackGetFromTop(notificationsStack, offsetIndex);
+        notificationListElement.appendChild(buildFeedItem(notificationRecord.type, notificationRecord.message, formatTimestamp(notificationRecord.dateCreated)));
+    }
+}
+
+
+/* ==========================================================================
+   12. NEW ORDER DIALOG
+   ========================================================================== */
+function syncForm() {
+    var allowedOptions = OPTIONS_FOR_SERVICE[serviceTypeInput.value];
+    var keepValue = serviceOptionInput.value;
+    var optionIndex;
+
+    serviceOptionInput.textContent = "";
+    for (optionIndex = 0; optionIndex < allowedOptions.length; optionIndex = optionIndex + 1) {
+        var optionElement = document.createElement("option");
+        optionElement.value = allowedOptions[optionIndex];
+        optionElement.textContent = allowedOptions[optionIndex];
+        serviceOptionInput.appendChild(optionElement);
+    }
+    if (arrayContainsValue(allowedOptions, keepValue)) { serviceOptionInput.value = keepValue; }
+
+    refreshPaperSizeAvailability();
+
+    var pageCount = Number(pagesInput.value);
+    var copyCount = Number(copiesInput.value);
+
+    ratePreview.textContent = formatPeso(PRICE_PER_PAGE[colorTierInput.value]);
+    totalPreview.textContent = (pageCount > 0 && copyCount > 0)
+        ? formatPeso(calculateBasePrice(colorTierInput.value, pageCount, copyCount)) : "₱0";
+
+    orderError.textContent = getPaperWarningText();
+}
+
+function openOrderModal() {
+    lastFocusedElement = document.activeElement;
+
+    customerNameInput.value = "";
+    subjectInput.value = "";
+    notesInput.value = "";
+    pagesInput.value = 1;
+    copiesInput.value = 1;
+    isRushInput.checked = false;
+    paperSizeInput.selectedIndex = 0;
+    paperSizeOtherInput.value = "";
+    paperSizeOtherInput.hidden = true;
+    orderError.textContent = "";
+    syncForm();
+
+    orderModal.hidden = false;
+    addClassToken(orderModal, "open");
+    customerNameInput.focus();
+}
+
+function closeOrderModal() {
+    orderModal.hidden = true;
+    removeClassToken(orderModal, "open");
+
+    if (lastFocusedElement) { lastFocusedElement.focus(); }
+}
+
+
+/* ==========================================================================
+   13. EVENTS
+   ========================================================================== */
+document.getElementById("add-btn").addEventListener("click", openOrderModal);
+document.getElementById("modal-close").addEventListener("click", closeOrderModal);
+document.getElementById("cancel-btn").addEventListener("click", closeOrderModal);
+document.getElementById("save-btn").addEventListener("click", saveOrder);
+
+document.getElementById("day-btn").addEventListener("click", function () {
+    dayOffset = dayOffset + 1;
+    commitChanges();
+});
+document.getElementById("reset-btn").addEventListener("click", clearAllData);
+
+nextButton.addEventListener("click", startNextOrder);
+searchInput.addEventListener("input", renderTable);
+
+orderModal.addEventListener("input", syncForm);
+orderModal.addEventListener("change", syncForm);
+
+paperSizeInput.addEventListener("change", function () {
+    refreshPaperSizeAvailability();
+    if (paperSizeInput.value === MATERIAL_OTHER_OPTION) { paperSizeOtherInput.focus(); }
+    orderError.textContent = getPaperWarningText();
+});
+
+paperSizeOtherInput.addEventListener("input", function () {
+    orderError.textContent = getPaperWarningText();
+});
+
+orderModal.addEventListener("click", function (clickEvent) {
+    if (clickEvent.target === orderModal) { closeOrderModal(); }
+});
+
+document.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Escape" && !orderModal.hidden) { closeOrderModal(); }
+});
+
+orderModal.addEventListener("keydown", function (keyboardEvent) {
+    if (keyboardEvent.key === "Enter" && keyboardEvent.target.type === "text") {
+        keyboardEvent.preventDefault();
+        saveOrder();
+    }
+});
+
+
+/* ==========================================================================
+   14. CROSS-FILE SNAPSHOT (localStorage) — link with Module 4 and Module 6
+   ========================================================================== */
+function readSnapshotOrders() {
+    var rawText = null;
+    try { rawText = localStorage.getItem(ORDERS_SNAPSHOT_KEY); } catch (readError) { return null; }
+    if (rawText === null) { return null; }
+    try { return parseJson(rawText); } catch (parseError) { return null; }
+}
+
+function saveSnapshot() {
+    var ordersData = [];
+    var currentNode = ordersList.head;
+    while (currentNode !== null) { ordersData[ordersData.length] = currentNode.value; currentNode = currentNode.next; }
+
+    try { localStorage.setItem(ORDERS_SNAPSHOT_KEY, stringifyJson(ordersData)); } catch (snapshotError) {}
+    try {
+        localStorage.setItem(APP_STATE_KEY, stringifyJson({
+            notifications: notificationsStack.stackData,
+            nextNotificationId: nextNotificationId,
+            nextOrderId: nextOrderId,
+            dayOffset: dayOffset
+        }));
+    } catch (stateError) {}
+}
+
+function restoreSavedState() {
+    var savedOrders = readSnapshotOrders();
+    var orderIndex;
+
+    if (isArrayLike(savedOrders)) {
+        // snapshot is newest-first; insert from the tail so the head stays newest
+        for (orderIndex = savedOrders.length - 1; orderIndex >= 0; orderIndex = orderIndex - 1) {
+            var savedOrder = savedOrders[orderIndex];
+            if (!savedOrder || typeof savedOrder.orderId !== "number") { continue; }
+            linkedListInsertAtHead(ordersList, savedOrder);
+            if (savedOrder.status === ORDER_STATUS.QUEUED) { queueEnqueue(getLaneQueue(savedOrder.queueType), savedOrder); }
+            if (savedOrder.orderId >= nextOrderId) { nextOrderId = savedOrder.orderId + 1; }
+        }
+    }
+
+    try {
+        var rawState = localStorage.getItem(APP_STATE_KEY);
+        var savedState = rawState === null ? null : parseJson(rawState);
+        if (savedState) {
+            if (isArrayLike(savedState.notifications)) {
+                notificationsStack.stackData = savedState.notifications;
+                notificationsStack.stackCount = savedState.notifications.length;
+            }
+            if (isFiniteNumber(savedState.nextNotificationId)) { nextNotificationId = savedState.nextNotificationId; }
+            if (isFiniteNumber(savedState.nextOrderId) && savedState.nextOrderId > nextOrderId) { nextOrderId = savedState.nextOrderId; }
+            if (isFiniteNumber(savedState.dayOffset)) { dayOffset = savedState.dayOffset; }
+        }
+    } catch (stateError) {}
+}
+
+function publishLatestOrderId() {
+    var orderExists = ordersList.head !== null;
+    var latestOrderId = orderExists ? ordersList.head.value.orderId : nextOrderId;
+
+    var handoff = {
+        orderId: latestOrderId,
+        orderNumber: formatOrderId(latestOrderId),
+        orderExists: orderExists,
+        dateSent: getShopIsoDate(),
+        messageId: new Date().getTime()
+    };
+
+    try { localStorage.setItem(ORDER_ID_HANDOFF_KEY, stringifyJson(handoff)); } catch (handoffError) {}
+    window.dispatchEvent(new CustomEvent("gsj:order-id", { detail: handoff }));
+}
+
+function commitChanges() {
+    checkUnclaimedOrders();
+    renderAll();
+    saveSnapshot();
+    publishLatestOrderId();
+    window.dispatchEvent(new CustomEvent("gsj:orders-updated"));
+}
+
+function getSnapshotFileSummary(orderIdNumber) {
+    var snapshotOrders = readSnapshotOrders();
+    var orderIndex;
+    if (!isArrayLike(snapshotOrders)) { return null; }
+    for (orderIndex = 0; orderIndex < snapshotOrders.length; orderIndex = orderIndex + 1) {
+        if (snapshotOrders[orderIndex].orderId === orderIdNumber &&
+            snapshotOrders[orderIndex].fileName !== null && snapshotOrders[orderIndex].fileName !== undefined) {
+            return {
+                fileName: snapshotOrders[orderIndex].fileName,
+                fileCount: snapshotOrders[orderIndex].fileCount,
+                fileDisposed: snapshotOrders[orderIndex].fileDisposed,
+                validationResult: snapshotOrders[orderIndex].fileValidationResult,
+                flagReasonText: snapshotOrders[orderIndex].fileFlagReasonText,
+                fileChannel: snapshotOrders[orderIndex].fileChannel,
+                dateDisposed: snapshotOrders[orderIndex].dateDisposed
+            };
+        }
+    }
+    return null;
+}
+
+function mergeSnapshotFileFields(snapshotOrder) {
+    if (!snapshotOrder || typeof snapshotOrder.orderId !== "number") { return; }
+
+    var liveOrder = linkedListFindOrder(ordersList, snapshotOrder.orderId);
+    if (liveOrder === null) { return; }
+
+    if (snapshotOrder.fileName === null || snapshotOrder.fileName === undefined) {
+        liveOrder.fileName = null;
+        liveOrder.fileCount = 0;
+        liveOrder.fileChannel = liveOrder.fileChannel || null;
+        liveOrder.fileDisposed = false;
+        liveOrder.dateDisposed = null;
+        return;
+    }
+
+    liveOrder.fileName = snapshotOrder.fileName;
+    liveOrder.fileCount = isFiniteNumber(snapshotOrder.fileCount) ? snapshotOrder.fileCount : liveOrder.fileCount;
+    liveOrder.fileChannel = snapshotOrder.fileChannel !== undefined ? snapshotOrder.fileChannel : liveOrder.fileChannel;
+    liveOrder.fileDisposed = !!snapshotOrder.fileDisposed;
+    liveOrder.dateDisposed = snapshotOrder.dateDisposed !== undefined ? snapshotOrder.dateDisposed : liveOrder.dateDisposed;
+}
+
+function applySnapshotFileFields() {
+    var snapshotOrders = readSnapshotOrders();
+    var orderIndex;
+    if (!isArrayLike(snapshotOrders)) { return; }
+    for (orderIndex = 0; orderIndex < snapshotOrders.length; orderIndex = orderIndex + 1) {
+        mergeSnapshotFileFields(snapshotOrders[orderIndex]);
+    }
+}
+
+window.addEventListener("storage", function (storageEvent) {
+    if (storageEvent.key === ORDERS_SNAPSHOT_KEY) {
+        applySnapshotFileFields();
+        renderAll();
+    }
+    if (storageEvent.key === INVENTORY_SNAPSHOT_KEY) {
+        renderStats();
+        if (!orderModal.hidden) {
+            refreshPaperSizeAvailability();
+            orderError.textContent = getPaperWarningText();
+        }
+    }
+});
+
+window.addEventListener("gsj:file-updated", function (fileEvent) {
+    var fileRecord = fileEvent && fileEvent.detail ? fileEvent.detail : null;
+    if (!fileRecord || typeof fileRecord.orderId !== "number") { return; }
+    mergeSnapshotFileFields(fileRecord);
+    renderAll();
+});
+
+
+/* ==========================================================================
+   15. START
+   ========================================================================== */
+populateSelect(serviceTypeInput, SERVICE_TYPES);
+populateSelect(colorTierInput, COLOR_TIERS);
+populateSelect(fileChannelInput, ORDER_CHANNELS);
+
+restoreSavedState();
+commitChanges();
+</script>
+</body>
+</html>
